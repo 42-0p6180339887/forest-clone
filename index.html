@@ -126,6 +126,24 @@
         </div>
         <p class="hint-text" id="saveMsg"></p>
       </div>
+      <div class="card">
+        <div class="card-title">☁️ 自动同步（GitHub Gist）</div>
+        <div id="syncOff">
+          <p class="hint-text">开启后，存档自动同步到你 GitHub 账号下的一个私密 Gist：种完树自动推送，打开 App 自动拉取合并，各设备保持一致。先去 <a href="https://github.com/settings/tokens/new?scopes=gist&description=ForestCloneSync" target="_blank" rel="noopener">生成一个 Token</a>（只需勾选 gist 一项），粘贴到下面连接。每台设备各填一次即可；Token 只存在本设备、只发往 GitHub。</p>
+          <input type="password" id="gistTokenInput" placeholder="粘贴 GitHub Token（只需 gist 权限）" autocomplete="off">
+          <div class="btn-row">
+            <button class="btn-primary" id="gistConnectBtn">连接并开启同步</button>
+          </div>
+        </div>
+        <div id="syncOn" class="hidden">
+          <p class="hint-text" id="syncStatus">已连接</p>
+          <div class="btn-row">
+            <button class="btn-ghost" id="syncNowBtn">立即同步</button>
+            <button class="btn-ghost" id="gistDisconnectBtn">断开</button>
+          </div>
+        </div>
+        <p class="hint-text" id="syncMsg"></p>
+      </div>
       <button class="btn-ghost danger-text" id="resetBtn">清空全部记录</button>
     </section>
   </main>

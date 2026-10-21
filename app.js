@@ -97,12 +97,12 @@ function treeSVG(species, p, dead = false) {
 
 /* ---------------- 存档 ---------------- */
 const LS_KEY = "forestClone.v1";
-let store = { coins: 0, sessions: [] };
+let store = { coins: 0, sessions: [], clearedAt: null };
 try {
   const raw = localStorage.getItem(LS_KEY);
   if (raw) store = Object.assign(store, JSON.parse(raw));
 } catch (e) { /* 忽略损坏的存档 */ }
-function save() { localStorage.setItem(LS_KEY, JSON.stringify(store)); }
+function save() { localStorage.setItem(LS_KEY, JSON.stringify(store)); notifySaveChanged(); }
 
 /* ---------------- 存档导出 / 导入（跨设备迁移与合并） ---------------- */
 const SAVE_FORMAT = "forest-clone-save";
@@ -112,6 +112,7 @@ function buildSaveData() {
     format: SAVE_FORMAT,
     version: 1,
     exportedAt: new Date().toISOString(),
+    clearedAt: store.clearedAt || null,
     coins: store.coins,
     sessions: store.sessions,
   };
@@ -137,10 +138,20 @@ function mergeSaveData(data) {
   if (data.format && data.format !== SAVE_FORMAT) {
     throw new Error("这不是「专注森林」的存档");
   }
+  // 清空墓碑：任一端在 clearedAt 时刻执行过「清空全部记录」，则该时刻及之前的记录
+  // 在合并时一律删除，避免旧设备把已清掉的树又同步回来；清空之后新种的树不受影响。
+  const clearTs = Math.max(
+    store.clearedAt ? Date.parse(store.clearedAt) || 0 : 0,
+    data.clearedAt ? Date.parse(data.clearedAt) || 0 : 0);
+  if (clearTs > 0) {
+    store.clearedAt = new Date(clearTs).toISOString();
+    store.sessions = store.sessions.filter((s) => Date.parse(s.endedAt) > clearTs);
+  }
   const byId = new Map(store.sessions.map((s) => [s.id, s]));
   let added = 0;
   for (const s of data.sessions) {
     if (!validSession(s)) continue;
+    if (clearTs > 0 && Date.parse(s.endedAt) <= clearTs) continue;
     if (!byId.has(s.id)) { byId.set(s.id, s); added += 1; }
   }
   store.sessions = [...byId.values()].sort((a, b) => a.id - b.id);
@@ -154,6 +165,136 @@ function importSaveText(text) {
   let data;
   try { data = JSON.parse(text); } catch (_) { throw new Error("内容不是有效的存档（JSON 解析失败）"); }
   return mergeSaveData(data);
+}
+
+/* ---------------- 自动同步（GitHub Gist） ----------------
+   存档同步到用户 GitHub 账号下的一个私密 Gist（文件 forest-save.json）。
+   Token 只保存在本设备的 localStorage 里，只发往 api.github.com。
+   策略：启动/手动同步时先拉取合并、再把并集推回；本地存档每次变化后防抖自动推送。 */
+const SYNC_KEY = "forestClone.sync";
+const GIST_FILE = "forest-save.json";
+const GIST_DESC = "Forest Clone save (auto-sync)";
+let syncCfg = null;
+try { syncCfg = JSON.parse(localStorage.getItem(SYNC_KEY) || "null"); } catch (_) { syncCfg = null; }
+let syncBusy = false;
+let syncPending = false;
+let syncTimer = null;
+let syncSuppressHook = false; // 拉取合并期间置 true：合并里的 save() 不再触发新一轮推送，避免自激循环
+let lastSyncAt = null;
+let lastSyncError = "";
+
+function persistSyncCfg() {
+  if (syncCfg) localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg));
+}
+function notifySaveChanged() { if (!syncSuppressHook) scheduleSyncPush(); }
+function scheduleSyncPush() {
+  if (!syncCfg || !syncCfg.token) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => { syncNow("auto"); }, 1200);
+}
+
+async function ghApi(path, opts = {}) {
+  const res = await fetch("https://api.github.com" + path, {
+    ...opts,
+    headers: {
+      "Accept": "application/vnd.github+json",
+      "Authorization": "Bearer " + syncCfg.token,
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...(opts.body ? { "Content-Type": "application/json" } : {}),
+    },
+  });
+  if (!res.ok) {
+    let msg = "GitHub 接口返回 " + res.status;
+    if (res.status === 401) msg = "Token 无效或已过期（401）";
+    if (res.status === 403) msg = "权限不足（403）：Token 需要 gist 权限";
+    if (res.status === 404) msg = "找不到同步 Gist（404），可能已被删除";
+    throw new Error(msg);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+async function gistFindOrCreate() {
+  if (syncCfg.gistId) {
+    try { await ghApi("/gists/" + syncCfg.gistId); return syncCfg.gistId; }
+    catch (e) { if (!/404/.test(e.message)) throw e; syncCfg.gistId = null; persistSyncCfg(); }
+  }
+  const list = await ghApi("/gists?per_page=100");
+  const found = Array.isArray(list) && list.find((g) => g.files && g.files[GIST_FILE]);
+  if (found) { syncCfg.gistId = found.id; persistSyncCfg(); return found.id; }
+  const created = await ghApi("/gists", {
+    method: "POST",
+    body: JSON.stringify({
+      description: GIST_DESC, public: false,
+      files: { [GIST_FILE]: { content: JSON.stringify(buildSaveData(), null, 2) } },
+    }),
+  });
+  syncCfg.gistId = created.id; persistSyncCfg();
+  return created.id;
+}
+
+async function gistPullMerge() {
+  const gist = await ghApi("/gists/" + syncCfg.gistId);
+  const file = gist.files && gist.files[GIST_FILE];
+  if (!file) return 0;
+  let content = file.content;
+  if (file.truncated && file.raw_url) content = await (await fetch(file.raw_url)).text();
+  if (!content) return 0;
+  syncSuppressHook = true;
+  try { return mergeSaveData(JSON.parse(content)); }
+  finally { syncSuppressHook = false; }
+}
+
+async function gistPush() {
+  await ghApi("/gists/" + syncCfg.gistId, {
+    method: "PATCH",
+    body: JSON.stringify({
+      files: { [GIST_FILE]: { content: JSON.stringify(buildSaveData(), null, 2) } },
+    }),
+  });
+}
+
+async function syncNow(reason) {
+  if (!syncCfg || !syncCfg.token) return;
+  if (syncBusy) { syncPending = true; return; }
+  syncBusy = true; renderSyncUI();
+  try {
+    if (!syncCfg.gistId) await gistFindOrCreate();
+    let added = 0;
+    try { added = await gistPullMerge(); }
+    catch (e) {
+      if (/404/.test(e.message)) {
+        syncCfg.gistId = null; persistSyncCfg();
+        await gistFindOrCreate();
+      } else throw e;
+    }
+    await gistPush();
+    lastSyncAt = new Date(); lastSyncError = "";
+    if (added > 0) { refreshTop(); renderForest(); renderStats(); }
+  } catch (e) {
+    lastSyncError = e.message || String(e);
+  } finally {
+    syncBusy = false; renderSyncUI();
+    if (syncPending) { syncPending = false; scheduleSyncPush(); }
+  }
+}
+
+function renderSyncUI() {
+  const on = !!syncCfg;
+  const offEl = $("syncOff"), onEl = $("syncOn");
+  if (!offEl || !onEl) return;
+  offEl.classList.toggle("hidden", on);
+  onEl.classList.toggle("hidden", !on);
+  if (on) {
+    $("syncStatus").textContent = syncBusy ? "同步中…"
+      : lastSyncError ? "同步失败：" + lastSyncError
+      : lastSyncAt ? "已连接 · 上次同步 " + lastSyncAt.toLocaleTimeString()
+      : "已连接 · 等待首次同步";
+  }
+}
+
+function initSync() {
+  renderSyncUI();
+  if (syncCfg && syncCfg.token) syncNow("startup");
 }
 
 /* ---------------- 全局状态 ---------------- */
@@ -475,7 +616,7 @@ function renderStats() {
 }
 $("resetBtn").addEventListener("click", () => {
   if (confirm("确定要清空全部记录吗？森林、金币和统计都会归零。")) {
-    store = { coins: 0, sessions: [] };
+    store = { coins: 0, sessions: [], clearedAt: new Date().toISOString() };
     save(); refreshTop(); renderStats();
   }
 });
@@ -529,6 +670,39 @@ $("importDoBtn").addEventListener("click", () => {
   } catch (err) { setSaveMsg("导入失败：" + err.message); }
 });
 
+/* ---------------- 自动同步 UI 接线 ---------------- */
+$("gistConnectBtn").addEventListener("click", async () => {
+  const token = $("gistTokenInput").value.trim();
+  if (!token) { $("syncMsg").textContent = "先粘贴 Token 再连接。"; return; }
+  syncCfg = { token, gistId: null };
+  $("syncMsg").textContent = "连接中…";
+  renderSyncUI();
+  try {
+    await ghApi("/user");
+    await gistFindOrCreate();
+    persistSyncCfg();
+    $("gistTokenInput").value = "";
+    await syncNow("manual");
+    $("syncMsg").textContent = lastSyncError
+      ? "已连接，但首次同步失败：" + lastSyncError
+      : "已连接，首次同步完成。这台设备的记录已与云端合并。";
+  } catch (e) {
+    syncCfg = null;
+    localStorage.removeItem(SYNC_KEY);
+    $("syncMsg").textContent = "连接失败：" + e.message;
+    renderSyncUI();
+  }
+});
+$("syncNowBtn").addEventListener("click", () => { syncNow("manual"); });
+$("gistDisconnectBtn").addEventListener("click", () => {
+  syncCfg = null;
+  localStorage.removeItem(SYNC_KEY);
+  lastSyncError = ""; lastSyncAt = null;
+  $("syncMsg").textContent = "已断开。本机记录保留；云端 Gist 还在你的 GitHub 账号里，不想要可去 gist.github.com 手动删。";
+  renderSyncUI();
+});
+
 /* ---------------- 启动 ---------------- */
 renderSetup();
 refreshTop();
+initSync();

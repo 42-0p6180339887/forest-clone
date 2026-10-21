@@ -11,11 +11,17 @@
 
 同一套界面用 **Capacitor** 打包为安卓 App、**Electron** 打包为 Windows 桌面版：
 
-- **下载**：到 [Releases](https://github.com/42-0p6180339887/forest-clone/releases) 拿 `ForestClone-Android-v1.1.0.apk`（手机直接装，debug 签名）与 `ForestClone-Setup-1.1.0.exe`（安装版）/ `ForestClone-Portable-1.1.0.exe`（免安装版，未签名，SmartScreen 提示时选"仍要运行"）。
+- **下载**：到 [Releases](https://github.com/42-0p6180339887/forest-clone/releases) 拿 `ForestClone-Android-v1.2.0.apk`（手机直接装，debug 签名）与 `ForestClone-Setup-1.2.0.exe`（安装版）/ `ForestClone-Portable-1.2.0.exe`（免安装版，未签名，SmartScreen 提示时选"仍要运行"）。
 - **构建**：GitHub Actions 流程 `.github/workflows/build-apps.yml`，在 Actions 页手动点 Run workflow 即自动构建并发布 Release；改版后 bump `package.json` 的 `version` 并同步改流程里的 tag 即可。
 - **本地开发**：`npm install` 后，桌面版 `npm start`；安卓版 `npm run cap:sync && npx cap open android`（需 Android Studio）。
 
-> App 内记录保存在本机（WebView / 浏览器本地存储），不跨设备同步。
+> App 内记录默认保存在本机（WebView / 浏览器本地存储）。可在统计页开启 **GitHub Gist 自动同步**实现跨设备一致（见下），也可用同页的导出/导入手动迁移（按记录编号自动合并，不丢不重；「清空全部记录」会通过同步墓碑传播到其他设备）。
+
+### ☁️ GitHub Gist 自动同步（v1.2.0+）
+
+1. 在 [GitHub Token 页面](https://github.com/settings/tokens/new?scopes=gist&description=ForestCloneSync) 生成一个只带 **gist** 权限的 Token。
+2. 在每台设备的统计页「自动同步」卡片里粘贴 Token 并连接——App 会在你的账号下找到（或新建）一个名为 `forest-save.json` 的私密 Gist 作为存档中转。
+3. 之后：种完树自动推送、打开 App 自动拉取合并。Token 只保存在本设备本地、只发往 api.github.com；随时可在统计页断开，或在 GitHub 上吊销 Token / 删除该 Gist。
 
 ## 快速开始
 

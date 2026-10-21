@@ -1,7 +1,7 @@
 name: Build Apps (APK + EXE)
 
 # 手动触发：Actions 页点 "Run workflow"，或 gh workflow run。
-# 构建完成后自动创建一个 v1.1.0 Release，APK 与 EXE 都挂在里面供下载。
+# 构建完成后自动创建一个 v1.2.0 Release，APK 与 EXE 都挂在里面供下载。
 on:
   workflow_dispatch:
 
@@ -64,22 +64,22 @@ jobs:
       - name: Collect release files
         run: |
           mkdir -p out
-          cp artifacts/forest-android-apk/app-debug.apk "out/ForestClone-Android-v1.1.0.apk"
+          cp artifacts/forest-android-apk/app-debug.apk "out/ForestClone-Android-v1.2.0.apk"
           cp artifacts/forest-windows-exe/*.exe out/
           ls -la out
       - name: Create / update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1.0
-          name: 专注森林 v1.1.0（Android APK + Windows EXE）
+          tag_name: v1.2.0
+          name: 专注森林 v1.2.0（Android APK + Windows EXE）
           make_latest: true
           files: out/*
           body: |
             ## 📲 下载
 
-            - **Android**：`ForestClone-Android-v1.1.0.apk` — 下载到手机直接安装（需允许"安装未知来源应用"；本包为 debug 签名，供个人使用）
-            - **Windows 安装版**：`ForestClone-Setup-1.1.0.exe` — 双击安装（未做代码签名，SmartScreen 可能提示，点"更多信息 → 仍要运行"）
-            - **Windows 免安装版**：`ForestClone-Portable-1.1.0.exe` — 下载直接双击运行，不写注册表
+            - **Android**：`ForestClone-Android-v1.2.0.apk` — 下载到手机直接安装（需允许"安装未知来源应用"；本包为 debug 签名，供个人使用）
+            - **Windows 安装版**：`ForestClone-Setup-1.2.0.exe` — 双击安装（未做代码签名，SmartScreen 可能提示，点"更多信息 → 仍要运行"）
+            - **Windows 免安装版**：`ForestClone-Portable-1.2.0.exe` — 下载直接双击运行，不写注册表
 
             ## 🌐 也可以直接用网页版
 

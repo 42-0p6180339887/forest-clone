@@ -220,3 +220,12 @@ input[type="range"] { width: 100%; margin-top: 14px; accent-color: var(--green);
   border: 1.5px solid #cfe0cf; border-radius: 10px; padding: 8px 10px;
   font: 12px/1.5 ui-monospace, Menlo, monospace; resize: vertical;
 }
+
+/* 自动同步卡片 */
+#gistTokenInput {
+  width: 100%; box-sizing: border-box; margin-top: 8px;
+  border: 1.5px solid #cfe0cf; border-radius: 10px; padding: 10px 12px;
+  font-size: 14px;
+}
+#syncMsg { min-height: 18px; color: #2e7d32; }
+.card a { color: #2e7d32; }
