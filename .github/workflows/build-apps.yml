@@ -1,0 +1,88 @@
+name: Build Apps (APK + EXE)
+
+# 手动触发：Actions 页点 "Run workflow"，或 gh workflow run。
+# 构建完成后自动创建一个 v1.0.0 Release，APK 与 EXE 都挂在里面供下载。
+on:
+  workflow_dispatch:
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+      - name: Sync web assets into Android project
+        run: |
+          npm run sync-web
+          npx cap sync android
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forest-android-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+  windows:
+    name: Windows EXE
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Build Windows installers (NSIS + portable)
+        run: npx electron-builder --win --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forest-windows-exe
+          path: dist/*.exe
+
+  release:
+    name: Publish Release
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Collect release files
+        run: |
+          mkdir -p out
+          cp artifacts/forest-android-apk/app-debug.apk "out/ForestClone-Android-v1.0.0.apk"
+          cp artifacts/forest-windows-exe/*.exe out/
+          ls -la out
+      - name: Create / update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: 专注森林 v1.0.0（Android APK + Windows EXE）
+          make_latest: true
+          files: out/*
+          body: |
+            ## 📲 下载
+
+            - **Android**：`ForestClone-Android-v1.0.0.apk` — 下载到手机直接安装（需允许"安装未知来源应用"；本包为 debug 签名，供个人使用）
+            - **Windows 安装版**：`ForestClone-Setup-1.0.0.exe` — 双击安装（未做代码签名，SmartScreen 可能提示，点"更多信息 → 仍要运行"）
+            - **Windows 免安装版**：`ForestClone-Portable-1.0.0.exe` — 下载直接双击运行，不写注册表
+
+            ## 🌐 也可以直接用网页版
+
+            https://42-0p6180339887.github.io/forest-clone/
+
+            > 记录保存在本机（浏览器 / App 本地存储），不跨设备同步。
