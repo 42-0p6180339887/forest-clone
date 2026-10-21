@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>专注森林 · Forest Clone</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌳</text></svg>">
+</head>
+<body>
+<div class="phone">
+  <header class="topbar">
+    <div class="brand">🌳 专注森林</div>
+    <div class="wallet">
+      <span class="coin" title="金币">🪙 <b id="coinCount">0</b></span>
+      <span class="streak" title="连续专注天数">🔥 <b id="streakCount">0</b> 天</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ 专注页 ============ -->
+    <section id="screen-focus" class="screen active">
+      <!-- 种植前 -->
+      <div id="focusSetup">
+        <div class="stage-wrap">
+          <div id="setupTree" class="tree-box"></div>
+          <p class="stage-hint" id="setupHint">种下一颗种子，开始专注</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">选择树种</div>
+          <div class="species-row" id="speciesRow"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">专注时长：<span id="durationLabel">25</span> 分钟</div>
+          <div class="chips" id="durationChips"></div>
+          <input type="range" id="durationRange" min="10" max="180" step="5" value="25">
+          <div class="range-scale"><span>10 分钟</span><span>180 分钟</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">这次专注做什么？</div>
+          <div class="chips" id="tagChips"></div>
+        </div>
+
+        <label class="switch-row">
+          <span>深度专注（切走页面超过 5 秒，树会枯死）</span>
+          <input type="checkbox" id="strictToggle" checked>
+          <span class="switch"></span>
+        </label>
+
+        <button class="btn-primary" id="plantBtn">🌱 开始种植</button>
+      </div>
+
+      <!-- 生长中 -->
+      <div id="focusGrowing" class="hidden">
+        <div class="timer-ring-wrap">
+          <svg class="ring" viewBox="0 0 200 200">
+            <circle class="ring-bg" cx="100" cy="100" r="92"></circle>
+            <circle class="ring-fg" id="ringFg" cx="100" cy="100" r="92"></circle>
+          </svg>
+          <div id="growingTree" class="tree-box in-ring"></div>
+        </div>
+        <div class="time-left" id="timeLeft">25:00</div>
+        <p class="stage-hint" id="growingHint">种子正在积蓄力量……</p>
+        <div class="growing-meta">
+          <span id="growingSpecies"></span> · <span id="growingTag"></span>
+        </div>
+        <div class="growing-actions">
+          <button class="btn-ghost" id="soundBtn">🔇 环境音</button>
+          <button class="btn-danger" id="giveUpBtn">放弃这棵树</button>
+        </div>
+      </div>
+
+      <!-- 结算 -->
+      <div id="focusResult" class="hidden">
+        <div id="resultTree" class="tree-box"></div>
+        <h2 id="resultTitle">🎉 专注完成！</h2>
+        <p class="stage-hint" id="resultText"></p>
+        <div class="result-actions">
+          <button class="btn-primary" id="againBtn">再种一棵</button>
+          <button class="btn-ghost" id="toForestBtn">查看我的森林</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 森林页 ============ -->
+    <section id="screen-forest" class="screen">
+      <h2 class="screen-title">我的森林</h2>
+      <p class="screen-sub" id="forestSummary"></p>
+      <div id="forestList"></div>
+    </section>
+
+    <!-- ============ 统计页 ============ -->
+    <section id="screen-stats" class="screen">
+      <h2 class="screen-title">专注统计</h2>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-num" id="statMinutes">0</div><div class="stat-label">累计专注（分钟）</div></div>
+        <div class="stat-card"><div class="stat-num" id="statGrown">0</div><div class="stat-label">种下的树</div></div>
+        <div class="stat-card"><div class="stat-num" id="statWithered">0</div><div class="stat-label">枯萎的树</div></div>
+        <div class="stat-card"><div class="stat-num" id="statStreak">0</div><div class="stat-label">连续专注（天）</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">近 7 天专注（分钟）</div>
+        <div class="bars" id="weekBars"></div>
+      </div>
+      <button class="btn-ghost danger-text" id="resetBtn">清空全部记录</button>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab active" data-screen="focus">🌱<span>专注</span></button>
+    <button class="tab" data-screen="forest">🌲<span>森林</span></button>
+    <button class="tab" data-screen="stats">📊<span>统计</span></button>
+  </nav>
+</div>
+
+<!-- 切走页面警告 -->
+<div id="awayOverlay" class="overlay hidden">
+  <div class="overlay-box">
+    <div class="away-emoji">🥀</div>
+    <h3>你的树正在枯萎！</h3>
+    <p>离开专注页面，<b id="awayCount">5</b> 秒后这棵树就会枯死……</p>
+    <p class="overlay-sub">快回来，回到这个页面就能救它！</p>
+  </div>
+</div>
+
+<!-- 放弃确认 -->
+<div id="confirmOverlay" class="overlay hidden">
+  <div class="overlay-box">
+    <div class="away-emoji">🍂</div>
+    <h3>真的要放弃吗？</h3>
+    <p>这棵树会立刻枯死，并被记进你的森林。</p>
+    <div class="confirm-actions">
+      <button class="btn-ghost" id="cancelGiveUp">继续专注</button>
+      <button class="btn-danger" id="confirmGiveUp">让它枯死</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
