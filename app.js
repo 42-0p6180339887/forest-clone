@@ -4,6 +4,21 @@
    玩法规格见 SPEC.md（REA 式 Seen / Inferred / Unknown 证据记录）
    ============================================================ */
 
+/* ---------------- 屏幕常亮（Wake Lock，原生 App 体验；不支持的环境自动跳过） ---------------- */
+let wakeLock = null;
+async function setWakeLock(on) {
+  try {
+    if (on && 'wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+    } else if (!on && wakeLock) {
+      await wakeLock.release(); wakeLock = null;
+    }
+  } catch (_) { /* 忽略：无权限/不支持时不影响主功能 */ }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && typeof active !== 'undefined' && active) setWakeLock(true);
+});
+
 /* ---------------- 树木渲染：原创参数化 SVG ---------------- */
 const SPECIES = {
   oak:    { name: "圆冠树", emoji: "🌳" },
@@ -193,6 +208,7 @@ $("plantBtn").addEventListener("click", () => {
   clearInterval(tickTimer);
   tickTimer = setInterval(tick, 250);
   tick();
+  setWakeLock(true);
 });
 
 function progress() {
@@ -225,6 +241,7 @@ function endSession(status, reason) {
   if (status === "grown") { earned = active.plannedMin; store.coins += earned; }
   save();
   clearInterval(tickTimer);
+  setWakeLock(false);
   stopAwayWatch();
   stopSound();
   const dead = status !== "grown";

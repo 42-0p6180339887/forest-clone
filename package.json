@@ -1,0 +1,51 @@
+{
+  "build": {
+    "appId": "com.wenhao.forestclone",
+    "files": [
+      "main.js",
+      "index.html",
+      "style.css",
+      "app.js",
+      "package.json"
+    ],
+    "nsis": {
+      "allowToChangeInstallationDirectory": true,
+      "oneClick": false,
+      "shortcutName": "专注森林"
+    },
+    "productName": "专注森林",
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "artifactName": "ForestClone-Setup-${version}.${ext}"
+        },
+        {
+          "target": "portable",
+          "artifactName": "ForestClone-Portable-${version}.${ext}"
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.2",
+    "@capacitor/core": "^6.2.2"
+  },
+  "description": "专注森林 Forest 复刻版：种树专注计时应用（Web / Android / Windows）",
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.2",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "main": "main.js",
+  "name": "forest-clone",
+  "private": true,
+  "scripts": {
+    "cap:sync": "npm run sync-web && cap sync",
+    "dist:win": "electron-builder --win",
+    "start": "electron .",
+    "sync-web": "node scripts/sync-web.mjs"
+  },
+  "version": "1.0.0"
+}
