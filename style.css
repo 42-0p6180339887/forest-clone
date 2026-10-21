@@ -209,3 +209,14 @@ input[type="range"] { width: 100%; margin-top: 14px; accent-color: var(--green);
 .overlay-sub { font-size: 13px; }
 .confirm-actions { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
 #awayCount { color: var(--danger); font-size: 17px; }
+
+/* 存档备份卡片 */
+.btn-row { display: flex; gap: 10px; margin-top: 10px; }
+.btn-row .btn-ghost, .btn-row .btn-primary { flex: 1; }
+.hint-text { color: #5f7161; font-size: 13px; line-height: 1.55; margin: 6px 0 2px; }
+#saveMsg { min-height: 18px; color: #2e7d32; }
+#importText {
+  width: 100%; box-sizing: border-box; margin-top: 10px;
+  border: 1.5px solid #cfe0cf; border-radius: 10px; padding: 8px 10px;
+  font: 12px/1.5 ui-monospace, Menlo, monospace; resize: vertical;
+}

@@ -45,6 +45,6 @@
     "start": "electron .",
     "sync-web": "node scripts/sync-web.mjs"
   },
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Wang Wenhao"
 }

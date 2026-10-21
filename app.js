@@ -104,6 +104,58 @@ try {
 } catch (e) { /* 忽略损坏的存档 */ }
 function save() { localStorage.setItem(LS_KEY, JSON.stringify(store)); }
 
+/* ---------------- 存档导出 / 导入（跨设备迁移与合并） ---------------- */
+const SAVE_FORMAT = "forest-clone-save";
+
+function buildSaveData() {
+  return {
+    format: SAVE_FORMAT,
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    coins: store.coins,
+    sessions: store.sessions,
+  };
+}
+
+function validSession(s) {
+  return !!s && typeof s === "object"
+    && typeof s.id === "number"
+    && typeof s.species === "string" && !!SPECIES[s.species]
+    && typeof s.plannedMin === "number"
+    && typeof s.focusedSec === "number"
+    && (s.status === "grown" || s.status === "withered")
+    && typeof s.endedAt === "string";
+}
+
+// 把一份外部存档合并进当前存档：按记录 id 去重（同一棵树在两台设备上不会重复计），
+// 金币按合并后的全部记录重算（金币只来自长成的树：+计划分钟数，与发放规则一致）。
+// 返回新增记录数。
+function mergeSaveData(data) {
+  if (!data || typeof data !== "object" || !Array.isArray(data.sessions)) {
+    throw new Error("存档格式不对：缺少 sessions 列表");
+  }
+  if (data.format && data.format !== SAVE_FORMAT) {
+    throw new Error("这不是「专注森林」的存档");
+  }
+  const byId = new Map(store.sessions.map((s) => [s.id, s]));
+  let added = 0;
+  for (const s of data.sessions) {
+    if (!validSession(s)) continue;
+    if (!byId.has(s.id)) { byId.set(s.id, s); added += 1; }
+  }
+  store.sessions = [...byId.values()].sort((a, b) => a.id - b.id);
+  store.coins = store.sessions.reduce(
+    (sum, s) => sum + (s.status === "grown" ? s.plannedMin : 0), 0);
+  save();
+  return added;
+}
+
+function importSaveText(text) {
+  let data;
+  try { data = JSON.parse(text); } catch (_) { throw new Error("内容不是有效的存档（JSON 解析失败）"); }
+  return mergeSaveData(data);
+}
+
 /* ---------------- 全局状态 ---------------- */
 const $ = (id) => document.getElementById(id);
 let selSpecies = "oak";
@@ -426,6 +478,55 @@ $("resetBtn").addEventListener("click", () => {
     store = { coins: 0, sessions: [] };
     save(); refreshTop(); renderStats();
   }
+});
+
+/* ---------------- 存档备份 UI ---------------- */
+function setSaveMsg(t) { $("saveMsg").textContent = t; }
+function afterImport(added) {
+  refreshTop(); renderForest(); renderStats();
+  setSaveMsg(added > 0
+    ? `导入完成：新增 ${added} 条记录（重复的已自动跳过），金币已按合并后的记录重算。`
+    : "导入完成：没有新记录——这份存档里的树你都已经有了。");
+}
+$("exportFileBtn").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(buildSaveData(), null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "forest-save-" + new Date().toISOString().slice(0, 10) + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  setSaveMsg("存档文件已导出。把它传到另一台设备，在那边的统计页点「导入存档文件」即可。");
+});
+$("exportCopyBtn").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(buildSaveData()));
+    setSaveMsg("存档文本已复制。到另一台设备的统计页点「粘贴导入」，粘贴后确认即可。");
+  } catch (_) {
+    setSaveMsg("复制失败（浏览器没给剪贴板权限），请改用「导出存档文件」。");
+  }
+});
+$("importFileBtn").addEventListener("click", () => $("importFileInput").click());
+$("importFileInput").addEventListener("change", async (e) => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  try { afterImport(importSaveText(await f.text())); }
+  catch (err) { setSaveMsg("导入失败：" + err.message); }
+});
+$("importPasteBtn").addEventListener("click", () => {
+  $("pasteBox").classList.remove("hidden");
+  $("importText").focus();
+});
+$("importCancelBtn").addEventListener("click", () => {
+  $("pasteBox").classList.add("hidden");
+  $("importText").value = "";
+});
+$("importDoBtn").addEventListener("click", () => {
+  try {
+    afterImport(importSaveText($("importText").value.trim()));
+    $("pasteBox").classList.add("hidden");
+    $("importText").value = "";
+  } catch (err) { setSaveMsg("导入失败：" + err.message); }
 });
 
 /* ---------------- 启动 ---------------- */

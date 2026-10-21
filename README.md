@@ -11,7 +11,7 @@
 
 同一套界面用 **Capacitor** 打包为安卓 App、**Electron** 打包为 Windows 桌面版：
 
-- **下载**：到 [Releases](https://github.com/42-0p6180339887/forest-clone/releases) 拿 `ForestClone-Android-v1.0.0.apk`（手机直接装，debug 签名）与 `ForestClone-Setup-1.0.0.exe`（安装版）/ `ForestClone-Portable-1.0.0.exe`（免安装版，未签名，SmartScreen 提示时选"仍要运行"）。
+- **下载**：到 [Releases](https://github.com/42-0p6180339887/forest-clone/releases) 拿 `ForestClone-Android-v1.1.0.apk`（手机直接装，debug 签名）与 `ForestClone-Setup-1.1.0.exe`（安装版）/ `ForestClone-Portable-1.1.0.exe`（免安装版，未签名，SmartScreen 提示时选"仍要运行"）。
 - **构建**：GitHub Actions 流程 `.github/workflows/build-apps.yml`，在 Actions 页手动点 Run workflow 即自动构建并发布 Release；改版后 bump `package.json` 的 `version` 并同步改流程里的 tag 即可。
 - **本地开发**：`npm install` 后，桌面版 `npm start`；安卓版 `npm run cap:sync && npx cap open android`（需 Android Studio）。
 

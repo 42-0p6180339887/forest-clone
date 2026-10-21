@@ -105,6 +105,27 @@
         <div class="card-title">近 7 天专注（分钟）</div>
         <div class="bars" id="weekBars"></div>
       </div>
+      <div class="card">
+        <div class="card-title">💾 存档备份与迁移</div>
+        <p class="hint-text">记录只保存在本设备。把存档导出（文件或文本），到另一台设备的这个页面导入，就会按每棵树的编号自动合并，重复的不重复计。</p>
+        <div class="btn-row">
+          <button class="btn-ghost" id="exportFileBtn">导出存档文件</button>
+          <button class="btn-ghost" id="exportCopyBtn">复制存档文本</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn-ghost" id="importFileBtn">导入存档文件</button>
+          <button class="btn-ghost" id="importPasteBtn">粘贴导入</button>
+        </div>
+        <input type="file" id="importFileInput" accept="application/json,.json" hidden>
+        <div id="pasteBox" class="hidden">
+          <textarea id="importText" rows="4" placeholder="把另一台设备复制的存档文本粘贴到这里"></textarea>
+          <div class="btn-row">
+            <button class="btn-primary" id="importDoBtn">确认导入</button>
+            <button class="btn-ghost" id="importCancelBtn">取消</button>
+          </div>
+        </div>
+        <p class="hint-text" id="saveMsg"></p>
+      </div>
       <button class="btn-ghost danger-text" id="resetBtn">清空全部记录</button>
     </section>
   </main>
