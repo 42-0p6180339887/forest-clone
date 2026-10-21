@@ -11,21 +11,19 @@
     "nsis": {
       "allowToChangeInstallationDirectory": true,
       "oneClick": false,
-      "shortcutName": "专注森林"
+      "shortcutName": "专注森林",
+      "artifactName": "ForestClone-Setup-${version}.${ext}"
     },
     "productName": "专注森林",
     "win": {
       "icon": "build/icon.png",
       "target": [
-        {
-          "target": "nsis",
-          "artifactName": "ForestClone-Setup-${version}.${ext}"
-        },
-        {
-          "target": "portable",
-          "artifactName": "ForestClone-Portable-${version}.${ext}"
-        }
+        "nsis",
+        "portable"
       ]
+    },
+    "portable": {
+      "artifactName": "ForestClone-Portable-${version}.${ext}"
     }
   },
   "dependencies": {
@@ -47,5 +45,6 @@
     "start": "electron .",
     "sync-web": "node scripts/sync-web.mjs"
   },
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "author": "Wang Wenhao"
 }
