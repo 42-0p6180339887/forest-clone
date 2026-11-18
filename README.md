@@ -11,8 +11,10 @@
 
 同一套界面用 **Capacitor** 打包为安卓 App、**Electron** 打包为 Windows 桌面版：
 
-- **下载**：到 [Releases](https://github.com/42-0p6180339887/forest-clone/releases) 拿 `ForestClone-Android-v1.2.0.apk`（手机直接装，debug 签名）与 `ForestClone-Setup-1.2.0.exe`（安装版）/ `ForestClone-Portable-1.2.0.exe`（免安装版，未签名，SmartScreen 提示时选"仍要运行"）。
-- **构建**：GitHub Actions 流程 `.github/workflows/build-apps.yml`，在 Actions 页手动点 Run workflow 即自动构建并发布 Release；改版后 bump `package.json` 的 `version` 并同步改流程里的 tag 即可。
+- **更新**：Android 和 Windows 版在「统计 → 检查更新」打开私有更新窗口。拥有统一私有发布库读取权限的用户可以授权、查看新版和校验下载。首次需要手动安装含更新入口的版本。
+- **旧安卓版**：公开的 1.2.0 附件用 CI 的临时 debug 密钥签名。安装前先在统计页导出存档。只有新包签名与设备上的原包一致时才能覆盖。需要换签名时，先校验导出的存档文件，再按安卓安装流程重新安装并导入。
+- **Windows 版**：结束计时和同步、导出存档后再关闭旧程序，使用原 Windows 用户账户覆盖安装。便携版使用对应的 Portable 文件。
+- **构建**：GitHub Actions 的 `.github/workflows/build-apps.yml` 可手动排队验证安卓和 Windows 打包。通过 [私有发布库](https://github.com/42-0p6180339887/app-updates) 的发布流程提供正式包。
 - **本地开发**：`npm install` 后，桌面版 `npm start`；安卓版 `npm run cap:sync && npx cap open android`（需 Android Studio）。
 
 > App 内记录默认保存在本机（WebView / 浏览器本地存储）。可在统计页开启 **GitHub Gist 自动同步**实现跨设备一致（见下），也可用同页的导出/导入手动迁移（按记录编号自动合并，不丢不重；「清空全部记录」会通过同步墓碑传播到其他设备）。

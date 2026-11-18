@@ -1,0 +1,7 @@
+{
+  "appId": "forest-clone",
+  "versionCode": 121,
+  "versionName": "1.2.1",
+  "title": "专注森林",
+  "installInstructions": "请先在森林统计页导出存档，结束计时和同步，再退出专注森林。安装版用已校验的 Setup 覆盖原安装，使用原 Windows 账户。便携版需要继续便携使用时，请从同一私有发布页取得对应 Portable 文件并核对附带的 SHA-256。"
+}

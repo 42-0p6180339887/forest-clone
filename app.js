@@ -702,6 +702,29 @@ $("gistDisconnectBtn").addEventListener("click", () => {
   renderSyncUI();
 });
 
+/* ---------------- 私有版本更新（安卓和 Windows 安装版） ---------------- */
+const updateBridge = window.forestUpdates || window.Capacitor?.Plugins?.ForestUpdates;
+window.crimpdUpdateBusy = () => Boolean(active || syncBusy);
+if (typeof updateBridge?.open === "function") {
+  $("appUpdateSection").hidden = false;
+  $("appUpdateBtn").addEventListener("click", async () => {
+    if (active) {
+      $("appUpdateStatus").textContent = "请先结束本次专注，再检查更新。";
+      return;
+    }
+    if (syncBusy) {
+      $("appUpdateStatus").textContent = "请等存档同步完成后再检查更新。";
+      return;
+    }
+    $("appUpdateStatus").textContent = "";
+    try {
+      await updateBridge.open();
+    } catch (_) {
+      $("appUpdateStatus").textContent = "无法打开更新窗口，请稍后重试。";
+    }
+  });
+}
+
 /* ---------------- 启动 ---------------- */
 renderSetup();
 refreshTop();

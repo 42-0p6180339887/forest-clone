@@ -1,7 +1,43 @@
 // 专注森林 · Electron 主进程
-// 只负责开一个窗口加载现有的 Web 界面（index.html），无额外逻辑。
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
+const { pathToFileURL } = require('url');
+const { existsSync } = require('fs');
+const { spawn } = require('child_process');
+
+const indexFile = path.join(__dirname, 'index.html');
+const indexUrl = pathToFileURL(indexFile).href;
+let updateWindow;
+
+function openPrivateUpdates() {
+  if (process.platform !== 'win32') throw new Error('Windows 更新入口仅在 Windows 上可用。');
+  if (updateWindow && updateWindow.exitCode === null) return Promise.resolve();
+  const directory = app.isPackaged ? path.join(process.resourcesPath, 'private-updates') : path.join(__dirname, 'private-updates');
+  const updater = path.join(directory, 'AppUpdates.ps1');
+  const config = path.join(directory, 'app-update.json');
+  if (!existsSync(updater) || !existsSync(config)) throw new Error('更新组件缺失。');
+  const windows = process.env.SystemRoot || 'C:\\Windows';
+  const executable = path.join(windows, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  const child = spawn(executable, [
+    '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', updater, '-Config', config,
+  ], { windowsHide: true, detached: true, stdio: 'ignore' });
+  updateWindow = child;
+  child.once('exit', () => { if (updateWindow === child) updateWindow = undefined; });
+  return new Promise((resolve, reject) => {
+    child.once('spawn', () => { child.unref(); resolve(); });
+    child.once('error', (error) => {
+      if (updateWindow === child) updateWindow = undefined;
+      reject(error);
+    });
+  });
+}
+
+ipcMain.handle('forest:open-private-updates', (event) => {
+  if (event.senderFrame !== event.sender.mainFrame || event.senderFrame?.url !== indexUrl) {
+    throw new Error('不能从外部页面打开更新。');
+  }
+  return openPrivateUpdates();
+});
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -13,11 +49,18 @@ function createWindow() {
     icon: path.join(__dirname, 'build', 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      sandbox: true
     }
   });
-  win.loadFile('index.html');
+  win.webContents.on('will-navigate', (event) => event.preventDefault());
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://')) void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  win.loadFile(indexFile);
 }
 
 app.whenReady().then(() => {
