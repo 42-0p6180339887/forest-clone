@@ -12,7 +12,8 @@
 同一套界面用 **Capacitor** 打包为安卓 App、**Electron** 打包为 Windows 桌面版：
 
 - **更新**：Android 和 Windows 版在「统计 → 检查更新」打开私有更新窗口。拥有统一私有发布库读取权限的用户可以授权、查看新版和校验下载。首次需要手动安装含更新入口的版本。
-- **旧安卓版**：公开的 1.2.0 附件用 CI 的临时 debug 密钥签名。安装前先在统计页导出存档。只有新包签名与设备上的原包一致时才能覆盖。需要换签名时，先校验导出的存档文件，再按安卓安装流程重新安装并导入。
+- **旧安卓版迁移**：1.2.0 的旧 APK 使用 CI 临时签名。「专注森林·新版」以独立包名 `com.wenhao.forestclone.privateupdates` 安装，可以与旧版并存。先在旧版「统计 → 存档备份与迁移」复制或导出存档，再在新版同页导入。两边核对记录数、最近记录和金币，确认后再处理旧版。使用 Gist 同步时，在新版重新连接。已有旧版应保留到迁移完成。
+- **Android 构建**：默认 Gradle 构建沿用 `com.wenhao.forestclone`。正式迁移包使用 `./gradlew :app:assembleRelease -PforestMigration=true`，再用专属于新版的长期密钥签名。以后更新新版须沿用该包名和证书。
 - **Windows 版**：结束计时和同步、导出存档后再关闭旧程序，使用原 Windows 用户账户覆盖安装。便携版使用对应的 Portable 文件。
 - **构建**：GitHub Actions 的 `.github/workflows/build-apps.yml` 可手动排队验证安卓和 Windows 打包。通过 [私有发布库](https://github.com/42-0p6180339887/app-updates) 的发布流程提供正式包。
 - **本地开发**：`npm install` 后，桌面版 `npm start`；安卓版 `npm run cap:sync && npx cap open android`（需 Android Studio）。

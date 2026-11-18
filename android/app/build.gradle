@@ -1,10 +1,17 @@
 apply plugin: 'com.android.application'
 
+def migrationBuild = providers.gradleProperty('forestMigration').getOrElse('false').toBoolean()
+
 android {
     namespace "com.wenhao.forestclone"
     compileSdk rootProject.ext.compileSdkVersion
+    buildFeatures { buildConfig true }
     defaultConfig {
-        applicationId "com.wenhao.forestclone"
+        applicationId(migrationBuild ? "com.wenhao.forestclone.privateupdates" : "com.wenhao.forestclone")
+        manifestPlaceholders = [
+            forestAppLabel: migrationBuild ? '专注森林·新版' : '@string/app_name',
+            forestActivityLabel: migrationBuild ? '专注森林·新版' : '@string/title_activity_main'
+        ]
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 2
