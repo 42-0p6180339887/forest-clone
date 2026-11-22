@@ -9,9 +9,9 @@ const indexFile = path.join(__dirname, 'index.html');
 const indexUrl = pathToFileURL(indexFile).href;
 let updateWindow;
 
-function openPrivateUpdates() {
+function openPrivateUpdates(startup = false) {
   if (process.platform !== 'win32') throw new Error('Windows 更新入口仅在 Windows 上可用。');
-  if (updateWindow && updateWindow.exitCode === null) return Promise.resolve();
+  if (!startup && updateWindow && updateWindow.exitCode === null) return Promise.resolve();
   const directory = app.isPackaged ? path.join(process.resourcesPath, 'private-updates') : path.join(__dirname, 'private-updates');
   const updater = path.join(directory, 'AppUpdates.ps1');
   const config = path.join(directory, 'app-update.json');
@@ -19,9 +19,9 @@ function openPrivateUpdates() {
   const windows = process.env.SystemRoot || 'C:\\Windows';
   const executable = path.join(windows, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
   const child = spawn(executable, [
-    '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', updater, '-Config', config,
+    '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', updater, '-Config', config, ...(startup ? ['-StartupCheck'] : []),
   ], { windowsHide: true, detached: true, stdio: 'ignore' });
-  updateWindow = child;
+  if (!startup) updateWindow = child;
   child.once('exit', () => { if (updateWindow === child) updateWindow = undefined; });
   return new Promise((resolve, reject) => {
     child.once('spawn', () => { child.unref(); resolve(); });
@@ -65,6 +65,9 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
+  if (app.isPackaged && process.platform === 'win32') {
+    Promise.resolve().then(() => openPrivateUpdates(true)).catch(() => {});
+  }
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
