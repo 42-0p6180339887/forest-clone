@@ -139,9 +139,13 @@ public final class UpdateBridge {
         normalizeExpiry(refreshed);refreshed.put("kind","device");saveAuthorization(refreshed);return refreshed.getString("access_token");
     }
     public void autoCheck() {
-        if(!running && Build.VERSION.SDK_INT>=23 && config!=null && prefs.contains("authorization") && System.currentTimeMillis()-prefs.getLong("lastAutoAttempt",0)>86400000L){
-            prefs.edit().putLong("lastAutoAttempt",System.currentTimeMillis()).apply();check(true);
-        }
+        if (closed || running || Build.VERSION.SDK_INT < 23 || config == null
+                || !prefs.contains("authorization") || !activity.hasWindowFocus()) return;
+        long now = System.currentTimeMillis();
+        long lastAttempt = prefs.getLong("lastAutoAttempt", 0);
+        if (now >= lastAttempt && now - lastAttempt < 24L * 60 * 60 * 1000) return;
+        prefs.edit().putLong("lastAutoAttempt", now).apply();
+        check(true);
     }
     private void check(boolean silent) {
         if(running)return;
@@ -151,9 +155,15 @@ public final class UpdateBridge {
             if(!manifest.getBoolean("available")){if(!silent)ui(()->message("暂无更新","此通道尚未发布安装包。"));return;}
             if(manifest.getLong("versionCode")<=currentCode()){if(!silent)ui(()->message("已是最新版本","当前版本 "+versionName()));return;}
             validateCandidate(manifest);candidate=manifest;
-            ui(()->new AlertDialog.Builder(activity).setTitle("发现新版本 "+manifest.optString("versionName"))
+            ui(()->{
+                if (silent && !activity.hasWindowFocus()) {
+                    prefs.edit().remove("lastAutoAttempt").apply();
+                    return;
+                }
+                new AlertDialog.Builder(activity).setTitle("发现新版本 "+manifest.optString("versionName"))
                 .setMessage(manifest.optString("notes")+"\n\n下载后将校验签名并保存本机快照。训练、记录编辑或同步期间请稍后安装。")
-                .setPositiveButton("下载更新",(d,w)->download(manifest)).setNegativeButton("稍后",null).show());
+                .setPositiveButton("下载更新",(d,w)->download(manifest)).setNegativeButton("稍后",null).show();
+            });
         },silent);
     }
     private JSONObject channel(String token) throws Exception {
